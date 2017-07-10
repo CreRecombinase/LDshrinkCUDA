@@ -1,0 +1,55 @@
+## With Rcpp 0.11.0 and later, we no longer need to set PKG_LIBS as there is
+## no user-facing library. The include path to headers is already set by R.
+#PKG_LIBS = 
+
+## With R 3.1.0 or later, you can uncomment the following line to tell R to 
+## enable compilation with C++11 (or even C++14) where available
+CXX_STD = CXX11
+	
+CUDA_HOME = /usr/local/cuda
+#R_HOME = /apps/R-3.2.0
+#CXX = /usr/bin/g++
+
+# This defines what the shared object libraries will be
+PKG_CPPFLAGS+= -I../inst/include/ 
+PKG_LIBS= -L${CUDA_HOME}/lib64 -Wl,-rpath,${CUDA_HOME}/lib64 -lcudart -lcublas -lcusparse -d -L/usr/local/cuda/targets/x86_64-linux/lib/
+
+
+#########################################
+
+R_INC = $(R_HOME)/include
+RCPP_INC = /home/nwknoblauch/R/x86_64-pc-linux-gnu-library/3.4/Rcpp/include/
+
+NVCC = $(CUDA_HOME)/bin/nvcc
+CUDA_INC = $(CUDA_HOME)/include 
+CUDA_LIB = $(CUDA_HOME)/lib64
+
+LIBS = -lcudart -lcublas -d
+NVCC_FLAGS = -std=c++11 -Xcompiler "-fPIC" -I/usr/include -I$(R_INC) $(PKG_CPPFLAGS) $(CLINK_CPPFLAGS) -I/usr/local/cuda/targets/x86_64-linux/include/ 
+
+### Define objects
+cu_sources := $(wildcard *cu)
+cu_sharedlibs := $(patsubst %.cu, %.o,$(cu_sources))
+
+cpp_sources := $(wildcard *.cpp)
+cpp_sharedlibs := $(patsubst %.cpp, %.o, $(cpp_sources))
+
+OBJECTS = $(cu_sharedlibs) $(cpp_sharedlibs)
+
+all : LDshrinkCUDA.so
+
+LDshrinkCUDA.so: $(OBJECTS)
+
+%.o: %.cpp $(cpp_sources)
+	$(CXX) $< -c -fPIC -I$(R_INC) -I$(RCPP_INC) $(PKG_CPPFLAGS) $(PKG_CFLAGS) $(PKG_CXXFLAGS) $(CLINK_CPPFLAGS)
+
+%.o: %.cu $(cu_sources)
+	$(NVCC) $(NVCC_FLAGS) -I$(CUDA_INC) $< -c	
+	
+	
+	
+	
+	
+	
+	
+	
